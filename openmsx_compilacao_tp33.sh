@@ -1,68 +1,126 @@
-#!/bin/sh
-# Variaveis
-ARQUIVO=$(basename $1)
+#!/bin/bash
+# Checagem de sanidade: testa se arquivo PAS para compilação foi fornecido e é válido.
+if [ -z "$1" ]; then
+    echo "erro: nome de arquivo faltando. Lembre-se de colocar \"%d/%f\" como parâmetro para este script no Geany." >&2
+    exit 1
+fi
+if [ ! -f "$1" ]; then
+    echo "erro: arquivo \"$1\" não encontrado. Especifique o caminho exato com \"%d/%f\"." >&2
+    exit 1
+fi
+
+# Checagem de sanidade: testa se nome do arquivo é válido.
+ARQUIVO=$(basename "$1")
+if [ -z "$ARQUIVO" ]; then
+    echo "erro: nome de arquivo não reconhecido. Lembre-se de colocar \"%d/%f\" como parâmetro para este script no Geany." >&2
+    exit 1
+fi
+
+# Checagem de sanidade: testa se diretório do projeto é válido.
+PROJETO=$(dirname "$1")
+if [ -z "$PROJETO" ]; then
+    echo "erro: nome do diretório do projeto não reconhecido. Lembre-se de colocar \"%d/%f\" como parâmetro para este script no Geany." >&2
+    exit 1
+fi
+if [ ! -d "$PROJETO" ]; then
+    echo "erro: diretório \"$PROJETO\" não encontrado. Especifique o caminho exato com \"%d/%f\"." >&2
+    exit 1
+fi
+
+# Checagem de sanidade: testa se arquivo de saída tem nome diferente do arquivo de entrada.
+EXECUTAVEL=$(echo $ARQUIVO | sed 's/pas/com/')
+if [ "$EXECUTAVEL" = "$ARQUIVO" ]; then
+    echo "erro: executável \"$EXECUTAVEL\" não pode ter o mesmo nome de arquivo de entrada." >&2
+    exit 1
+fi
+
+# Checagem de sanidade: testa se arquivo de erro tem nome diferente do arquivo de entrada.
 ERRO=$(echo $ARQUIVO | sed 's/pas/err/')
-DIRETORIO="$HOME/MSX/programacao"
-SCRIPT_TCL_ORIGINAL=$DIRETORIO"/original_compilacao_tp33.tcl"
-SCRIPT_TCL=$DIRETORIO"/compilacao.tcl"
+if [ "$ERRO" = "$ARQUIVO" ]; then
+    echo "erro: arquivo de erro \"$ERRO\" não pode ter o mesmo nome de arquivo de entrada." >&2
+    exit 1
+fi
+
+# Checagem de sanidade: teste se diretório do repositório é válido.
+UNIX2DOS=$(whereis unix2dos)
+if [ -z "$UNIX2DOS" ]; then
+    echo "erro: programa unix2dos não encontrado. Instale-o para usar este script." >&2
+    exit 1
+fi
+
+# Checagem de sanidade: teste se diretório do repositório é válido.
+DIRETORIO=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+if [ -z "$DIRETORIO" ]; then
+    echo "erro: diretório do repositório não reconhecido." >&2
+    exit 1
+fi
+if [ ! -d "$DIRETORIO" ]; then
+    echo "erro: diretório \"$DIRETORIO\" não encontrado." >&2
+    exit 1
+fi
+
+DISCO="$DIRETORIO/develop.dsk"
 OPENMSX=$(which openmsx)
-DISCO=$DIRETORIO"/develop.dsk"
-SANDBOX=$DIRETORIO"/dev/sandbox/"
-BATCH_COMPILACAO=$SANDBOX"/compila.bat"
-SED=$(which sed)
-TEMP1=$(mktemp)
-TEMP2=$(mktemp)
-#
-# Remove lixo da pasta que contém o programa a ser compilado.
-find $PWD -name "*~" -or -name "*.err" -or -name "*.bak" -delete
+SANDBOX="$DIRETORIO/src/sandbox/"
+TEMPORARIO=$(mktemp)
+
 #
 # A cada vez que é executado, o script apaga todo o conteúdo da sandbox,
 # recria o diretório e copia tudo para lá.
-rm -rf $SANDBOX
-mkdir $SANDBOX
-cp -rf $PWD/* $SANDBOX
 #
-# Aqui o script vai contabilizar quantas linhas tem o projeto, e vai calcular
-# quanto tempo será necessário que o OpenMSX fique acelerado, para poder 
-# compilar o código mais rapidamente.
-#echo $ARQUIVO > $TEMP1
-#cat $ARQUIVO | grep '\$i' | cut -f2 -d":" | tr -d "}" >> $TEMP1
-#tr -d '\r '< $TEMP1 > $TEMP2
-#echo 0 >  $TEMP1
-#for partes in $(cat $TEMP2); do
-#	cat $partes | wc -l >> $TEMP1
-#done
-#LINHAS=$(paste -sd+ $TEMP1 | bc)
-#TEMPO1=$((($LINHAS / 100)))
-#TEMPO2=$((TEMPO1 + 2))
-#TEMPO3=$((TEMPO2 + 4))
-TEMPO1=1
-TEMPO2=1
-TEMPO3=1
+rm -rf "$SANDBOX"
+mkdir "$SANDBOX"
+
 #
-# Feito isto, agora é hora de modificar o script TCL. 
-cat $SCRIPT_TCL_ORIGINAL | sed "s|%%DISCO%%|$DISCO|g" | sed "s|%%SANDBOX%%|$SANDBOX|g" | sed "s|%%TEMPO2%%|$TEMPO2|g" | sed "s|%%TEMPO3%%|$TEMPO3|g" > $SCRIPT_TCL
+# Remove lixo da pasta que contém o programa a ser compilado.
+#
+find $PWD -name "*~" -or -name "*.err" -or -name "*.bak" -delete
+
+#
+# Converte todos os arquivos .pas em formato MSX-DOS ao copiar para sandbox
+#
+for file in $PROJETO/*.pas; do
+    echo "file: $file"
+    unix2dos < "$file" > "$SANDBOX/$file"
+    touch "$file"
+done
+
+TCL_SCRIPT="$DIRETORIO/templates/tp33.tcl"
+DRIVE="$DIRETORIO/develop.dsk"
+
+#
+# Modifica o script TCL com os parâmetros obtidos.
+#
+cat "$TCL_SCRIPT" | sed "s|%%DRIVE%%|$DISCO|g" | sed "s|%%SANDBOX%%|$SANDBOX|g" > "$TEMPORARIO"
+
 #
 # Aqui ele cria um COMPILA.BAT, para ser executado no boot do OpenMSX.
-# Detalhe para os comandos sed: O primeiro remove os espaços em branco
-# (necessários para não confundir código de controle com barra invertida.
-# O segundo transforma o arquivo de "UNIX" para "DOS".
-EXECUTAVEL=$(echo $ARQUIVO | sed "s/.pas/.com/g")
-echo "d:" > $BATCH_COMPILACAO
-printf "c:\\ tp3\\ tp33f.com %s /r%s \r\n" $ARQUIVO $ERRO >> $BATCH_COMPILACAO
-printf "d:%s\n" $EXECUTAVEL >> $BATCH_COMPILACAO
-sed -i 's/ tp3/tp3/g' $BATCH_COMPILACAO
-sed -i 's/$/\r/' $BATCH_COMPILACAO
+# Depois de compilado e executado, o arquivo gerado é exportado para a
+# pasta do SANDBOX.
+#
+COMPILABAT="$SANDBOX/compila.bat"
+cat << EOF > "$COMPILABAT"
+D:
+C:\\TP3\\TP33F $ARQUIVO /r$ERRO
+C:\\MEMMAN _SYSTEM@D:\\$EXECUTAVEL@
+c:\\OMSXCTL diskmanipulator export hda $SANDBOX
+c:\\OMSXCTL set speed 100
+EOF
+unix2dos "$COMPILABAT"
+
 #
 # Executa o emulador pra compilar o programa. A configuração é um MSX 2
 # caprichado, e o script que faz o milagre é um script em TCL, definido
 # no alto desse arquivo de configuração.
-$OPENMSX -machine Boosted_MSX2_EN -script $SCRIPT_TCL
-#$OPENMSX -machine Boosted_MSX2+_JP -script $SCRIPT_TCL
-#$OPENMSX -machine Boosted_MSXturboR_with_IDE -script $SCRIPT_TCL
 #
-# Quando o OpenMSX é encerrado, o script retoma o controle, e faz o 
-# caminho contrário: Ele apaga a pasta original, recria-a e copia
-# todos os arquivos de volta pra lá.
-rm $PWD/*
-cp -rf $SANDBOX/* $PWD 
+OPENMSX=$(which openmsx)
+$OPENMSX -machine Boosted_MSX2_EN -script omsxctl.tcl -script "$TEMPORARIO"
+#$OPENMSX -machine Boosted_MSX2+_JP -script "$TEMPORARIO"
+#$OPENMSX -machine Boosted_MSXturboR_with_IDE -script "$TEMPORARIO"
+rm "$TEMPORARIO"
+
+#
+# Quando o OpenMSX é encerrado, o script retoma o controle, e faz o
+# a cópia dos arquivos atualizados de volta para a pasta $PROJETO
+#
+rsync "$SANDBOX/" "$PROJETO/"

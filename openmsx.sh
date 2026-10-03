@@ -1,1 +1,1 @@
-openmsx -machine Panasonic_FS-A1ST -ext ide -hda develop.dsk
+/opt/openMSX/bin/openmsx -machine Panasonic_FS-A1ST -ext ide -hda develop.dsk
