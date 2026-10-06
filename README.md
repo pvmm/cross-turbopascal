@@ -10,10 +10,20 @@ Como ainda não temos um compilador cruzado de Pascal para MSX (ainda não, mas 
 ## Problemas
  - É uma solução menos **tosca**, convenhamos. Já foi mais.
  - Quando a gente fecha o emulador, temos que sair e voltar do diretório, porque senão os arquivos não estão disponíveis.
+## Arquivos e diretórios
+ - `develop.dsk.xz` hard disk virtual do MSX;
+ - `omsxctl.tcl` script que permite controlar o OpenMSX por dentro;
+ - `openmsx_compilacao.sh` script que compila o arquivo Pascal em binário .com com o Turbo Pascal;
+ - `openmsx_compilacao_tp33.sh` script que compila o arquivo Pascal em binário .com com o TP33F;
+ - `samples` - diretório com scripts parciais e de exemplo;
+ - `templates` - diretório com modelos de scripts TCL que são modificados e usados em tempo de compilação;
 ## Melhorias
- - Mudar o develop.dsk. Essa imagem de HD foi feita com base na imagem que o [PopolonY2K disponibilizou](http://www.popolony2k.com.br/) em algum lugar no site dele. Está bom, mas eu quero dar uma arrumada...
- - Colocar o código todo de UNIX para DOS ao copiar e o caminho contrário, quando fechar o emulador (UNIX2DOS, DOS2UNIX, sacou?).
- - Trocar as tabulações por espaços em branco, usando o comando expand.
+ - [ ] Mudar o develop.dsk. Essa imagem de HD foi feita com base na imagem que o [PopolonY2K disponibilizou](http://www.popolony2k.com.br/) em algum lugar no site dele. Está bom, mas eu quero dar uma arrumada...
+ - [x] Colocar o código todo de UNIX para DOS ao copiar e o caminho contrário, quando fechar o emulador (UNIX2DOS, DOS2UNIX, sacou?).
+ - [x] Trocar as tabulações por espaços em branco, usando o comando expand.
+ - [x] Usar `rsync -c` para substituir arquivos atualizados.
+ - [x] Substituir shell scripts por bash scripts permite que eles descubram onde estão, o que torna a modificação deles desnecessária se você os executa do lugar padrão.
+ - [x] Usar ferramenta omsxctl que permite controlar o emulador por dentro.
 ## Maiores informações
  Tem esse link [aqui](https://www.retropolis.com.br/2020/04/06/montando-um-ambiente-de-desenvolvimento-cruzado-para-msx-ou-tentando/), onde eu expliquei em mais detalhes. E a continuação, [aqui](https://www.retropolis.com.br/2020/04/13/update-montando-um-ambiente-de-desenvolvimento-cruzado-para-msx-ou-tentando/).
 ## Detalhes técnicos
