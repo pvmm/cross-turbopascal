@@ -16,6 +16,7 @@ Como ainda não temos um compilador cruzado de Pascal para MSX (ainda não, mas 
  - `openmsx_compilacao.sh` script que compila o arquivo Pascal em binário .com com o Turbo Pascal;
  - `openmsx_compilacao_tp33.sh` script que compila o arquivo Pascal em binário .com com o TP33F;
  - `oldscripts` - diretório com pedaços de scripts incompletos ou de exemplo;
+ - `samples` - diretório com código fonte Pascal de exemplo;
  - `templates` - diretório com modelos de scripts TCL que são modificados e usados em tempo de compilação;
 ## Melhorias
  - [ ] Mudar o develop.dsk. Essa imagem de HD foi feita com base na imagem que o [PopolonY2K disponibilizou](http://www.popolony2k.com.br/) em algum lugar no site dele. Está bom, mas eu quero dar uma arrumada...
