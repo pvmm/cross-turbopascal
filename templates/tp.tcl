@@ -4,17 +4,17 @@
 #   This is free software, and you are welcome to redistribute it
 #   under certain conditions;
 #
-#   variables to replace: %%DRIVE%%, %%SANDBOX%%
+#   variables to replace: DRIVE, SANDBOX (use it like this: %%<VAR-NAME>%%)
 #
-#   %%DRIVE%%           the hard disk file that will be used
-#   %%SANDBOX%%         the directory where files are temporarily stored
-#   %%PAS%%             name of pascal file to compile
-#   %%COM%%             compiled MSX-DOS binary file
+#   DRIVE               the hard disk file that will be used
+#   SANDBOX             the directory where files are temporarily stored
+#   PAS                 name of pascal file to compile
+#   COM                 compiled MSX-DOS binary file
 
 # Aqui ele define qual será a imagem de HD a ser usada. Usamos uma que tem
 # várias ferramentas de desenvolvimento.
 
-set hdfile %%DRIVE%% ; # o arquivo com a imagem de HD que será usado
+set hdfile "%%DRIVE%%" ; # o arquivo com a imagem de HD que será usado
 
 # Aqui ele desliga o MSX, define que vai usar uma interface IDE e seta qual
 # é o HD.
@@ -33,7 +33,7 @@ diskmanipulator import hda4 "%%SANDBOX%%"
 set power on
 after boot "set speed 10000"
 
-# Após 18 unidades de tempo, ele executa o Turbo Pascal e compila como um .com o arquivo solicitado.
+# Após 18 unidades de tempo, ele executa o Turbo Pascal (sem mensagens de erro) e compila como um .com o arquivo solicitado.
 # Após 34 unidades de tempo, ele sai do Turbo Pascal, vai pro drive D e executa o arquivo .com.
 # Após 50 unidades de tempo, ele exporta o conteúdo do drive D pra pasta na máquina.
 # Após 70 unidades de tempo, ele baixa a velocidade para a padrão.

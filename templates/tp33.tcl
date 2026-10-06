@@ -4,20 +4,21 @@
 #   This is free software, and you are welcome to redistribute it
 #   under certain conditions;
 #
-#   variables to replace: %%DRIVE%%, %%SANDBOX%%
+#   variables to replace: DRIVE, SANDBOX (use it like this: %%<VARNAME>%%)
 #
-#   %%DRIVE%%		the hard disk file that will be used
-#   %%SANDBOX%%         the directory where files are temporarily stored
+#   DRIVE             the hard disk file that will be used
+#   SANDBOX           the directory where files are temporarily stored
 
 # Aqui ele define qual será a imagem de HD a ser usada. Usamos uma que tem
 # várias ferramentas de desenvolvimento.
 
-set hdfile %%DRIVE%% ; # o arquivo com a imagem de HD que será usado
+set hdfile "%%DRIVE%%" ; # o arquivo com a imagem de HD que será usado
 
 # Aqui ele desliga o MSX, define que vai usar uma interface IDE e seta qual
 # é o HD.
 
 set power off
+ext ram4mb
 ext ide
 hda $hdfile
 
@@ -31,5 +32,5 @@ diskmanipulator import hda4 "%%SANDBOX%%"
 set power on
 after boot "set speed 10000"
 
-# Após 10 unidades de tempo, ele executa o script COMPILA.BAT.
-after time 10 	"type d:compila.bat\\r"
+# Após 15 unidades de tempo, ele executa o script COMPILA.BAT.
+after time 20 "type \"d:compila.bat\\r\""
