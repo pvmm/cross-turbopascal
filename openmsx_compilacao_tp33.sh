@@ -41,11 +41,17 @@ if [ "$ERRO" = "$ARQUIVO" ]; then
     exit 1
 fi
 
-# Checagem de sanidade: teste se diretório do repositório é válido.
-UNIX2DOS=$(whereis unix2dos)
+# Checagem de sanidade: testa se a ferramenta unix2dos existe.
+UNIX2DOS=$(which unix2dos)
 if [ -z "$UNIX2DOS" ]; then
     echo "erro: programa unix2dos não encontrado. Instale-o para usar este script." >&2
     exit 1
+fi
+
+# Checagem de sanidade: testa se a ferramenta expand existe.
+EXPAND=$(which expand)
+if [ -z "$EXPAND" ]; then
+    echo "aviso: programa expand não encontrado. Conversão de tabs em espaços não será feita." >&2
 fi
 
 # Checagem de sanidade: teste se diretório do repositório é válido.
@@ -80,13 +86,15 @@ find $PWD -name "*~" -or -name "*.err" -or -name "*.bak" -delete
 # Converte todos os arquivos .pas em formato MSX-DOS ao copiar para sandbox
 #
 for file in $PROJETO/*.pas; do
-    echo "file: $file"
-    unix2dos < "$file" > "$SANDBOX/$file"
-    touch "$file"
+    echo "Arquivo: $file"
+    $UNIX2DOS < "$file" > "$SANDBOX/"$(basename "$file")
+    if [ -f "$EXPAND" ]; then
+        $EXPAND --tabs=4 < "$file" > "$SANDBOX/"$(basename "$file")
+    fi
 done
 
 TCL_SCRIPT="$DIRETORIO/templates/tp33.tcl"
-DRIVE="$DIRETORIO/develop.dsk"
+DISCO="$DIRETORIO/develop.dsk"
 
 #
 # Modifica o script TCL com os parâmetros obtidos.
@@ -102,9 +110,11 @@ COMPILABAT="$SANDBOX/compila.bat"
 cat << EOF > "$COMPILABAT"
 D:
 C:\\TP3\\TP33F $ARQUIVO /r$ERRO
-C:\\MEMMAN _SYSTEM@D:\\$EXECUTAVEL@
-c:\\OMSXCTL diskmanipulator export hda $SANDBOX
-c:\\OMSXCTL set speed 100
+C:\\OPENMSX\\OMSXCTL diskmanipulator export hda4 $SANDBOX
+C:\\OPENMSX\\OMSXCTL puts {Partition 4 exported to: $SANDBOX}"
+REM C:\\TP3\\MEMMAN _SYSTEM@D:$EXECUTAVEL@
+D:$EXECUTAVEL
+C:\\OPENMSX\\OMSXCTL set speed 100 >NUL
 EOF
 unix2dos "$COMPILABAT"
 
@@ -123,4 +133,4 @@ rm "$TEMPORARIO"
 # Quando o OpenMSX é encerrado, o script retoma o controle, e faz o
 # a cópia dos arquivos atualizados de volta para a pasta $PROJETO
 #
-rsync "$SANDBOX/" "$PROJETO/"
+rsync -c "$SANDBOX/" "$PROJETO/"

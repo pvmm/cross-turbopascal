@@ -34,11 +34,17 @@ if [ "$EXECUTAVEL" = "$ARQUIVO" ]; then
     exit 1
 fi
 
-# Checagem de sanidade: teste se diretório do repositório é válido.
-UNIX2DOS=$(whereis unix2dos)
+# Checagem de sanidade: testa se a ferramenta unix2dos existe.
+UNIX2DOS=$(which unix2dos)
 if [ -z "$UNIX2DOS" ]; then
     echo "erro: programa unix2dos não encontrado. Instale-o para usar este script." >&2
     exit 1
+fi
+
+# Checagem de sanidade: testa se a ferramenta expand existe.
+EXPAND=$(which expand)
+if [ -z "$EXPAND" ]; then
+    echo "aviso: programa expand não encontrado. Conversão de tabs em espaços não será feita." >&2
 fi
 
 # Checagem de sanidade: teste se diretório do repositório é válido.
@@ -55,6 +61,7 @@ fi
 DISCO="$DIRETORIO/develop.dsk"
 OPENMSX=/opt/openMSX/bin/openmsx #$(which openmsx)
 SANDBOX="$DIRETORIO/src/sandbox/"
+TCL_SCRIPT="$DIRETORIO/templates/tp.tcl"
 TEMPORARIO=$(mktemp)
 
 #
@@ -68,30 +75,17 @@ mkdir "$SANDBOX"
 # Converte todos os arquivos .pas em formato MSX-DOS ao copiar para sandbox
 #
 for file in "$PROJETO"/*.pas; do
-    echo "file: $file"
-    unix2dos < "$file" > "$SANDBOX/$file"
-    touch "$file"
+    echo "Arquivo: $file"
+    "$UNIX2DOS" < "$file" > "$SANDBOX/"$(basename "$file")
+    if [ -f "$EXPAND" ]; then
+        $EXPAND --tabs=4 < "$file" > "$SANDBOX/"$(basename "$file")
+    fi
 done
 
 #
-# Aqui ele altera o script TCL, para ser executado no boot do OpenMSX.
+# Modifica o script TCL com os parâmetros obtidos.
 #
-cat << EOF > "$TEMPORARIO"
-set power off
-ext ide
-
-hda $DISCO
-diskmanipulator format hda4
-diskmanipulator import hda4 $SANDBOX
-
-set power on
-after boot "set speed 10000"
-
-after time 16 "type \"turbo\\rn\\ro\\rc\\rq\\rcd:$ARQUIVO\\r\""
-after time 36 "type \"q\\rd:\\r$EXECUTAVEL\\r\""
-#after time 50 "set speed 100"
-#after time 70 "diskmanipulator export hda4 \"$SANDBOX\""
-EOF
+cat "$TCL_SCRIPT" | sed "s|%%DRIVE%%|$DISCO|g" | sed "s|%%SANDBOX%%|$SANDBOX|g" | sed "s|%%PAS%%|$ARQUIVO|g" | sed "s|%%COM%%|$EXECUTAVEL|g" > "$TEMPORARIO"
 
 #
 # Executa o emulador pra compilar o programa. A configuração é um MSX 2
@@ -104,4 +98,4 @@ rm "$TEMPORARIO"
 # Quando o OpenMSX é encerrado, o script retoma o controle, e faz o 
 # a cópia dos arquivos atualizados de volta para a pasta $PROJETO
 #
-rsync "$SANDBOX/" "$PROJETO/"
+rsync -c "$SANDBOX/" "$PROJETO/"
