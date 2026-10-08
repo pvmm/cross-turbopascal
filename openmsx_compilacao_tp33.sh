@@ -130,30 +130,36 @@ echo "TMP_SCRIPT: $TMP_SCRIPT"
 cat "$TCL_SCRIPT" | sed "s|%%DRIVE%%|$DISCO|g" | sed "s|%%SANDBOX%%|$SANDBOX|g" > "$TMP_SCRIPT"
 
 #
-# Aqui ele cria um STEP1.BAT, para ser executado antes da compilação do
-# executável. Ele carrega o GIOS como um programa residente no MSX-DOS.
+# A etapa 1 carrega o MEMMAN como um programa residente no MSX-DOS.
 #
-STEP1BAT="$SANDBOX/STEP1.BAT"
-"$UNIX2DOS" << EOF > "$STEP1BAT"
+"$UNIX2DOS" << EOF > "$SANDBOX/STEP1.BAT"
 C:\\TP3\\MEMMAN _SYSTEM@D:\\STEP2@
 EOF
 
 #
-# Aqui ele cria um STEP2.BAT, para ser executado depois da compilação do
-# executável. Depois de compilado e executado, o arquivo gerado é exportado
+# Etapa 2 compila o executável e depois o arquivo gerado é exportado
 # para a pasta do SANDBOX.
 #
-STEP2BAT="$SANDBOX/STEP2.BAT"
-"$UNIX2DOS" << EOF > "$STEP2BAT"
-C:\\TP3\\TL C:\\TP3\\GIOS
-C:\\TP3\\GIOS
+"$UNIX2DOS" << EOF > "$SANDBOX/STEP2.BAT"
 D:
-ECHO Compilando $ARQUIVO...
+REM Compilando $ARQUIVO...
 C:\\TP3\\TP33F $ARQUIVO /r$ERRO
-IF EXIST $ERRO ECHO ** BREAK **
-IF NOT EXIST $ERRO $EXECUTAVEL
+REM Export result to sandbox
 C:\\OPENMSX\\OMSXCTL diskmanipulator export hda4 $SANDBOX
 C:\\OPENMSX\\OMSXCTL puts {Partition 4 exported to: $SANDBOX}"
+IF NOT EXIST $ERRO STEP3
+ECHO *** compiler error ***
+C:\\OPENMSX\\OMSXCTL set speed 100 >NUL
+EOF
+
+#
+# A etapa 3 executa o executável se estiver sem erros.
+#
+"$UNIX2DOS" << EOF > "$SANDBOX/STEP3.BAT"
+REM Start GIOS environment
+C:\\TP3\\TL C:\\TP3\\GIOS
+C:\\TP3\\GIOS
+$EXECUTAVEL
 C:\\OPENMSX\\OMSXCTL set speed 100 >NUL
 EOF
 
