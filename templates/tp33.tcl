@@ -33,4 +33,4 @@ set power on
 after boot "set speed 10000"
 
 # Após 15 unidades de tempo, ele executa o script COMPILA.BAT.
-after time 20 "type \"d:compila.bat\\r\""
+after time 20 "type \"d:step1.bat\\r\""

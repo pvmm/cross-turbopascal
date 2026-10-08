@@ -40,5 +40,5 @@ after boot "set speed 10000"
 
 after time 16 "type turbo\\rn\\ro\\rc\\rq\\rcd:%%PAS%%\\r"
 after time 36 "type q\\rd:\\r%%COM%%\\r"
-after time 50 "set speed 100"
-after time 70 "diskmanipulator export hda4 %%SANDBOX%%"
+after time 50 "puts \"Exporting hda4 back to SANDBOX\"; diskmanipulator export hda4 %%SANDBOX%%"
+after time 70 "set speed 100"

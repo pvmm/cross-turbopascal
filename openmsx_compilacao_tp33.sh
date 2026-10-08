@@ -70,8 +70,24 @@ if [ ! -d "$DIRETORIO" ]; then
     exit 1
 fi
 
+# Checagem de sanidade: teste se imagem de disco está descompactada.
 DISCO="$DIRETORIO/develop.dsk"
-echo "DISCO: $DISCO"
+if [ ! -f "$DISCO" ]; then
+    UNXZ=$(which unxz)
+    if [ -z "$UNXZ" ]; then
+        echo "aviso: programa unxz não encontrado. Instale unxz para descompactar develop.dsk.xz." >&2
+        exit 1
+    fi
+    if [ ! -f "$DISCO.xz" ]; then
+        echo "aviso: disco compactado $DISCO.xz não encontrado." >&2
+        exit 1
+    fi
+    "$UNXZ" "$DISCO.xz" "$DISCO"
+    echo "Disco $DISCO.xz descompactado." >&2
+else
+    echo "Disco $DISCO.xz já descompactado." >&2
+fi
+
 OPENMSX=$(which openmsx)
 echo "OPENMSX: $OPENMSX"
 SANDBOX="$DIRETORIO/src/sandbox"
@@ -94,9 +110,12 @@ find $PWD -name "*~" -or -name "*.err" -or -name "*.bak" -delete
 #
 for file in "$PROJETO"/*.pas; do
     echo "Arquivo: $file"
-    $UNIX2DOS < "$file" > "$SANDBOX/"$(basename "$file")
+    OUTFILE="$SANDBOX/"$(basename "$file")
     if [ -f "$EXPAND" ]; then
-        $EXPAND --tabs=4 < "$file" > "$SANDBOX/"$(basename "$file")
+        $EXPAND --tabs=4 < "$file" > "$OUTFILE"
+        $UNIX2DOS "$OUTFILE"
+    else
+        $UNIX2DOS < "$file" > "$OUTFILE"
     fi
 done
 
@@ -111,23 +130,32 @@ echo "TMP_SCRIPT: $TMP_SCRIPT"
 cat "$TCL_SCRIPT" | sed "s|%%DRIVE%%|$DISCO|g" | sed "s|%%SANDBOX%%|$SANDBOX|g" > "$TMP_SCRIPT"
 
 #
-# Aqui ele cria um COMPILA.BAT, para ser executado no boot do OpenMSX.
-# Depois de compilado e executado, o arquivo gerado é exportado para a
-# pasta do SANDBOX.
+# Aqui ele cria um STEP1.BAT, para ser executado antes da compilação do
+# executável. Ele carrega o GIOS como um programa residente no MSX-DOS.
 #
-COMPILABAT="$SANDBOX/compila.bat"
-echo "COMPILABAT: $COMPILABAT"
-cat << EOF > "$COMPILABAT"
+STEP1BAT="$SANDBOX/STEP1.BAT"
+"$UNIX2DOS" << EOF > "$STEP1BAT"
+C:\\TP3\\MEMMAN _SYSTEM@D:\\STEP2@
+EOF
+
+#
+# Aqui ele cria um STEP2.BAT, para ser executado depois da compilação do
+# executável. Depois de compilado e executado, o arquivo gerado é exportado
+# para a pasta do SANDBOX.
+#
+STEP2BAT="$SANDBOX/STEP2.BAT"
+"$UNIX2DOS" << EOF > "$STEP2BAT"
+C:\\TP3\\TL C:\\TP3\\GIOS
+C:\\TP3\\GIOS
 D:
 ECHO Compilando $ARQUIVO...
 C:\\TP3\\TP33F $ARQUIVO /r$ERRO
+IF EXIST $ERRO ECHO ** BREAK **
+IF NOT EXIST $ERRO $EXECUTAVEL
 C:\\OPENMSX\\OMSXCTL diskmanipulator export hda4 $SANDBOX
 C:\\OPENMSX\\OMSXCTL puts {Partition 4 exported to: $SANDBOX}"
-C:\\TP3\\MEMMAN _SYSTEM@D:$EXECUTAVEL@
-REM D:$EXECUTAVEL
 C:\\OPENMSX\\OMSXCTL set speed 100 >NUL
 EOF
-unix2dos "$COMPILABAT"
 
 #
 # Executa o emulador pra compilar o programa. A configuração é um MSX 2
@@ -144,4 +172,4 @@ rm "$TMP_SCRIPT"
 # Quando o OpenMSX é encerrado, o script retoma o controle, e faz o
 # a cópia dos arquivos atualizados de volta para a pasta $PROJETO
 #
-rsync -c "$SANDBOX/" "$PROJETO/"
+rsync -c -v --exclude='*.[Pp][Aa][Ss]' "$SANDBOX/" "$PROJETO/"

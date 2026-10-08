@@ -62,11 +62,27 @@ if [ ! -d "$DIRETORIO" ]; then
     exit 1
 fi
 
+# Checagem de sanidade: teste se imagem de disco está descompactada.
 DISCO="$DIRETORIO/develop.dsk"
-echo "DISCO: $DISCO"
+if [ ! -f "$DISCO" ]; then
+    UNXZ=$(which unxz)
+    if [ -z "$UNXZ" ]; then
+        echo "aviso: programa unxz não encontrado. Instale unxz para descompactar develop.dsk.xz." >&2
+        exit 1
+    fi
+    if [ ! -f "$DISCO.xz" ]; then
+        echo "aviso: disco compactado $DISCO.xz não encontrado." >&2
+        exit 1
+    fi
+    "$UNXZ" "$DISCO.xz" "$DISCO"
+    echo "Disco $DISCO.xz descompactado." >&2
+else
+    echo "Disco $DISCO.xz já descompactado." >&2
+fi
+
 OPENMSX=/opt/openMSX/bin/openmsx #$(which openmsx)
 echo "OPENMSX: $OPENMSX"
-SANDBOX="$DIRETORIO/src/sandbox/"
+SANDBOX="$DIRETORIO/src/sandbox"
 echo "SANDBOX: $SANDBOX"
 TCL_SCRIPT="$DIRETORIO/templates/tp.tcl"
 echo "TCL_SCRIPT: $TCL_SCRIPT"
@@ -83,9 +99,12 @@ mkdir "$SANDBOX"
 #
 for file in "$PROJETO"/*.pas; do
     echo "Arquivo: $file"
-    "$UNIX2DOS" < "$file" > "$SANDBOX/"$(basename "$file")
+    OUTFILE="$SANDBOX/"$(basename "$file")
     if [ -f "$EXPAND" ]; then
-        $EXPAND --tabs=4 < "$file" > "$SANDBOX/"$(basename "$file")
+        $EXPAND --tabs=4 < "$file" > "$OUTFILE"
+        $UNIX2DOS "$OUTFILE"
+    else
+        $UNIX2DOS < "$file" > "$OUTFILE"
     fi
 done
 
@@ -109,4 +128,4 @@ rm "$TMP_SCRIPT"
 # Quando o OpenMSX é encerrado, o script retoma o controle, e faz o 
 # a cópia dos arquivos atualizados de volta para a pasta $PROJETO
 #
-rsync -c "$SANDBOX/" "$PROJETO/"
+rsync -c -v --exclude='*.[Pp][Aa][Ss]' "$SANDBOX/" "$PROJETO/"
